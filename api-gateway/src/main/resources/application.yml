@@ -1,0 +1,87 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: api-gateway
+  
+  # Configuration Redis pour Docker
+  data:
+    redis:
+      host: ${SPRING_DATA_REDIS_HOST:localhost}
+      port: ${SPRING_DATA_REDIS_PORT:6379}
+
+  cloud:
+    gateway:
+      routes:
+        # Auth Service
+        - id: auth-service
+          uri: http://auth-service:8081
+          predicates:
+            - Path=/auth/**
+          filters:
+            - name: CircuitBreaker
+              args:
+                name: auth-cb
+
+        # Service A — JWT + Circuit Breaker + Rate Limiter
+        - id: service-a
+          uri: http://service-a:8082
+          predicates:
+            - Path=/api/service-a/**
+          filters:
+            - JwtAuthFilter
+            - StripPrefix=2
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 5
+                redis-rate-limiter.burstCapacity: 10
+                key-resolver: "#{@userKeyResolver}"
+            - name: CircuitBreaker
+              args:
+                name: service-a-cb
+                fallbackUri: forward:/fallback/service-a
+
+        # Service B — JWT + Circuit Breaker
+        - id: service-b
+          uri: http://service-b:8083
+          predicates:
+            - Path=/api/service-b/**
+          filters:
+            - JwtAuthFilter
+            - StripPrefix=2
+            - name: CircuitBreaker
+              args:
+                name: service-b-cb
+
+      httpclient:
+        connect-timeout: 2000
+        response-timeout: 5s
+
+# ── Resilience4j ─────────────────────────────────────────────────────────────
+resilience4j:
+  circuitbreaker:
+    configs:
+      default:
+        sliding-window-size: 10
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 10s
+    instances:
+      service-a-cb:
+        base-config: default
+      service-b-cb:
+        base-config: default
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,gateway,circuitbreakers
+  health:
+    redis:
+      enabled: true
+    circuitbreakers:
+      enabled: true
+  endpoint:
+    health:
+      show-details: always

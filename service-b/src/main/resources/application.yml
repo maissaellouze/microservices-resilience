@@ -1,0 +1,53 @@
+server:
+  port: 8083
+
+spring:
+  application:
+    name: service-b
+
+# ── Resilience4j — Bulkhead ───────────────────────────────────────────────────
+resilience4j:
+  bulkhead:
+    instances:
+      payment-bh:
+        # Sémaphore : max 10 appels concurrents
+        max-concurrent-calls: 10
+        # Délai d'attente max pour obtenir un emplacement (0 = rejet immédiat)
+        max-wait-duration: 0ms
+
+  # Thread-pool Bulkhead alternatif (commenté — remplacer type ci-dessous par THREADPOOL)
+  thread-pool-bulkhead:
+    instances:
+      payment-bh-tp:
+        max-thread-pool-size: 5
+        core-thread-pool-size: 3
+        queue-capacity: 10
+        keep-alive-duration: 20ms
+
+  # Circuit Breaker complémentaire sur le Service B
+  circuitbreaker:
+    instances:
+      payment-bh:
+        sliding-window-type: COUNT_BASED
+        sliding-window-size: 10
+        failure-rate-threshold: 60
+        wait-duration-in-open-state: 15s
+        permitted-number-of-calls-in-half-open-state: 2
+
+# ── Actuator ──────────────────────────────────────────────────────────────────
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus,bulkheads,circuitbreakers
+  endpoint:
+    health:
+      show-details: always
+  health:
+    bulkheads:
+      enabled: true
+
+logging:
+  level:
+    com.resilience: DEBUG
+    io.github.resilience4j: DEBUG

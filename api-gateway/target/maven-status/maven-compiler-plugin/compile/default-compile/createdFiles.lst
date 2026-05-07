@@ -1,0 +1,4 @@
+com/resilience/gateway/ApiGatewayApplication.class
+com/resilience/gateway/JwtAuthFilter.class
+com/resilience/gateway/FallbackController.class
+com/resilience/gateway/JwtAuthFilter$Config.class

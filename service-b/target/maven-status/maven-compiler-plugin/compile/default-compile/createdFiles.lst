@@ -1,0 +1,5 @@
+com/resilience/serviceb/ServiceBApplication.class
+com/resilience/serviceb/PaymentService$PaymentResult.class
+com/resilience/serviceb/PaymentService$PaymentRequest.class
+com/resilience/serviceb/PaymentService.class
+com/resilience/serviceb/ServiceBController.class

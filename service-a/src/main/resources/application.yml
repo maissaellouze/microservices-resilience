@@ -1,0 +1,62 @@
+server:
+  port: 8082
+
+spring:
+  application:
+    name: service-a
+
+# ── Resilience4j — Circuit Breaker ────────────────────────────────────────────
+resilience4j:
+  circuitbreaker:
+    instances:
+      service-a-cb:
+        # Fenêtre glissante : 10 appels
+        sliding-window-type: COUNT_BASED
+        sliding-window-size: 10
+        # Seuil d'ouverture : 50% d'échecs
+        failure-rate-threshold: 50
+        # Seuil d'appels lents (> 2s = appel lent)
+        slow-call-duration-threshold: 2s
+        slow-call-rate-threshold: 80
+        # Délai en état OPEN avant de passer en HALF_OPEN
+        wait-duration-in-open-state: 10s
+        # Nombre d'appels autorisés en HALF_OPEN
+        permitted-number-of-calls-in-half-open-state: 3
+        # Transition automatique OPEN → HALF_OPEN
+        automatic-transition-from-open-to-half-open-enabled: true
+        # Exceptions qui déclenchent le Circuit Breaker
+        record-exceptions:
+          - com.resilience.servicea.ExternalServiceException
+          - java.io.IOException
+          - java.util.concurrent.TimeoutException
+
+  retry:
+    instances:
+      service-a-cb:
+        max-attempts: 3
+        wait-duration: 200ms
+        retry-exceptions:
+          - com.resilience.servicea.ExternalServiceException
+
+  timelimiter:
+    instances:
+      service-a-cb:
+        timeout-duration: 3s
+
+# ── Actuator ──────────────────────────────────────────────────────────────────
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus,circuitbreakers
+  endpoint:
+    health:
+      show-details: always
+  health:
+    circuitbreakers:
+      enabled: true
+
+logging:
+  level:
+    com.resilience: DEBUG
+    io.github.resilience4j: DEBUG

@@ -1,0 +1,114 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: api-gateway
+
+  cloud:
+    gateway:
+      # ── Routes ──────────────────────────────────────────────────────────────
+      routes:
+
+        # Auth Service — public (pas de JWT requis)
+        - id: auth-service
+          uri: http://auth-service:8081
+          predicates:
+            - Path=/auth/**
+          filters:
+            - name: CircuitBreaker
+              args:
+                name: auth-cb
+                fallbackUri: forward:/fallback/service-a
+
+        # Service A — Circuit Breaker + JWT
+        - id: service-a
+          uri: http://service-a:8082
+          predicates:
+            - Path=/api/service-a/**
+          filters:
+            - JwtAuthFilter
+            - StripPrefix=2
+            - name: CircuitBreaker
+              args:
+                name: service-a-cb
+                fallbackUri: forward:/fallback/service-a
+            - name: Retry
+              args:
+                retries: 3
+                statuses: SERVICE_UNAVAILABLE
+                backoff:
+                  firstBackoff: 100ms
+                  maxBackoff: 500ms
+                  factor: 2
+
+        # Service B — Bulkhead + JWT
+        - id: service-b
+          uri: http://service-b:8083
+          predicates:
+            - Path=/api/service-b/**
+          filters:
+            - JwtAuthFilter
+            - StripPrefix=2
+            - name: CircuitBreaker
+              args:
+                name: service-b-cb
+                fallbackUri: forward:/fallback/service-b
+          
+
+      # ── Timeouts globaux ────────────────────────────────────────────────────
+      httpclient:
+        connect-timeout: 2000
+        response-timeout: 5s
+
+jwt:
+  secret: mySecretKeyForJWTThatIsAtLeast256BitsLong!ChangeInProduction
+
+# ── Resilience4j Circuit Breakers ─────────────────────────────────────────────
+resilience4j:
+  circuitbreaker:
+    configs:
+      default:
+        sliding-window-type: COUNT_BASED
+        sliding-window-size: 10
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 10s
+        permitted-number-of-calls-in-half-open-state: 3
+        automatic-transition-from-open-to-half-open-enabled: true
+    instances:
+      service-a-cb:
+        base-config: default
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 10s
+      service-b-cb:
+        base-config: default
+        failure-rate-threshold: 60
+        wait-duration-in-open-state: 15s
+      auth-cb:
+        failure-rate-threshold: 80
+        wait-duration-in-open-state: 5s
+
+  timelimiter:
+    instances:
+      service-a-cb:
+        timeout-duration: 3s
+      service-b-cb:
+        timeout-duration: 5s
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,gateway,circuitbreakers
+  endpoint:
+    health:
+      show-details: always
+  health:
+    circuitbreakers:
+      enabled: true
+
+logging:
+  level:
+    com.resilience: DEBUG
+    org.springframework.cloud.gateway: INFO
+    io.github.resilience4j: DEBUG

@@ -1,0 +1,23 @@
+server:
+  port: 8081
+
+spring:
+  application:
+    name: auth-service
+
+jwt:
+  secret: mySecretKeyForJWTThatIsAtLeast256BitsLong!ChangeInProduction
+  expiration: 86400000   # 24 heures en millisecondes
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always
+
+logging:
+  level:
+    com.resilience: DEBUG

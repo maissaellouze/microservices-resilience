@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+             https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>com.resilience</groupId>
+  <artifactId>microservices-resilience</artifactId>
+  <version>1.0.0</version>
+  <packaging>pom</packaging>
+  <name>Microservices Resilience — Circuit Breaker &amp; Bulkhead</name>
+
+  <modules>
+    <module>auth-service</module>
+    <module>api-gateway</module>
+    <module>service-a</module>
+    <module>service-b</module>
+  </modules>
+
+  <parent>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-parent</artifactId>
+    <version>3.2.5</version>
+    <relativePath/>
+  </parent>
+
+  <properties>
+    <java.version>17</java.version>
+    <spring-cloud.version>2023.0.1</spring-cloud.version>
+    <resilience4j.version>2.2.0</resilience4j.version>
+    <jjwt.version>0.12.5</jjwt.version>
+  </properties>
+
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>org.springframework.cloud</groupId>
+        <artifactId>spring-cloud-dependencies</artifactId>
+        <version>${spring-cloud.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+</project>
